@@ -2,7 +2,7 @@ const Leads = require("../../models/Leads");
 const LeadCollection = require("../../models/LeadCollection");
 const puppeteer = require("puppeteer");
 
-exports.Mapextract = async (req, res, next) => {
+exports.MapExtract = async (req, res, next) => {
   const { location, category, title, description } = req.body;
 
   if (!location || !category || !title) {
