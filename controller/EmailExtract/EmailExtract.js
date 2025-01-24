@@ -12,9 +12,10 @@ exports.EmailExtract = async (req, res, next) => {
 
   try {
     const leads = await Leads.find({ leadCollectionId: id });
-    let domains = leads.map((lead) => ({ _id: lead._id, website: lead.website }))
-      .filter(domain => domain.website && domain.website !== 'N/A');
-    domains=domains.slice(0, 10);
+    let domains = leads
+      .map((lead) => ({ _id: lead._id, website: lead.website }))
+      .filter((domain) => domain.website && domain.website !== "N/A");
+    domains = domains.slice(0, 10);
 
     res.status(200).json({
       success: true,
@@ -37,11 +38,29 @@ exports.EmailExtract = async (req, res, next) => {
       await Promise.all(
         batch.map(async ({ _id, website }) => {
           try {
-            const browser = await puppeteer.launch({ headless: false });
+            const browser = await puppeteer.launch({
+              headless: "new",
+              args: [
+                "--lang=en-US",
+                "--disable-setuid-sandbox",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--no-first-run",
+                "--no-zygote",
+                "--single-process",
+              ],
+              defaultViewport: {
+                width: 1920,
+                height: 1080,
+              },
+            });
+
             const page = await browser.newPage();
             const allEmails = new Set();
 
-            const emailRegex = /[a-zA-Z0-9._%+\-!#$&'*/=?^`{|}~]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?/g;
+            const emailRegex =
+              /[a-zA-Z0-9._%+\-!#$&'*/=?^`{|}~]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?/g;
 
             // Scrape homepage
             await page.goto(website, {
@@ -57,11 +76,18 @@ exports.EmailExtract = async (req, res, next) => {
 
             // Get company description from Gemini
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({
+              model: "gemini-1.5-flash",
+            });
 
-            const descriptionPrompt = `Based on this website content, write 2-3 clear, concise descriptions (2-3 sentences each) about the company/website. Focus on their main business, value proposition, and unique features. Content: ${pageText.substring(0, 2000)}`;
+            const descriptionPrompt = `Based on this website content, write 2-3 clear, concise descriptions (2-3 sentences each) about the company/website. Focus on their main business, value proposition, and unique features. Content: ${pageText.substring(
+              0,
+              2000
+            )}`;
 
-            const descriptionResult = await model.generateContent(descriptionPrompt);
+            const descriptionResult = await model.generateContent(
+              descriptionPrompt
+            );
             const companyDescriptions = descriptionResult.response.text();
 
             // Get internal links
@@ -97,9 +123,13 @@ exports.EmailExtract = async (req, res, next) => {
               const linksResult = await model.generateContent(linksPrompt);
               const response = linksResult.response.text();
               try {
-                const cleanedResponse = response.replace(/```json\n?|\n?```/g, "").trim();
+                const cleanedResponse = response
+                  .replace(/```json\n?|\n?```/g, "")
+                  .trim();
                 urlsToScrape = JSON.parse(cleanedResponse);
-                console.log(`Selected URLs for scraping: ${urlsToScrape.length}`);
+                console.log(
+                  `Selected URLs for scraping: ${urlsToScrape.length}`
+                );
               } catch (error) {
                 console.error("Error parsing URLs from Gemini:", error);
                 // Fallback to first 3 URLs if parsing fails
@@ -142,9 +172,8 @@ exports.EmailExtract = async (req, res, next) => {
             // Update the lead document with emails and description
             await Leads.findByIdAndUpdate(_id, {
               email: validEmails,
-              description: companyDescriptions
+              description: companyDescriptions,
             });
-
           } catch (error) {
             console.error(`Error processing ${website}:`, error);
           }
