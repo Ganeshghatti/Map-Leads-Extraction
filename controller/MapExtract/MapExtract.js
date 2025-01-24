@@ -10,29 +10,51 @@ exports.MapExtract = async (req, res, next) => {
   }
   try {
     const url = `https://www.google.com/maps?hl=en`;
-    
+
     const browser = await puppeteer.launch({
-      headless: true,
-      defaultViewport: null,
+      headless: "new",
       args: [
-        "--window-size=1920,1080",
-        "--no-sandbox",
+        "--lang=en-US",
         "--disable-setuid-sandbox",
+        "--no-sandbox",
         "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process"
       ],
+      defaultViewport: {
+        width: 1920,
+        height: 1080
+      }
     });
     const page = await browser.newPage();
 
+    // Set a longer timeout
+    page.setDefaultTimeout(10000); // 10 seconds
+
+    // Add debugging screenshots
     await page.goto(url, { waitUntil: "networkidle2" });
+    await page.screenshot({ path: 'initial-load.png' });
 
     const searchQuery = `${category} in ${location}`;
     await page.waitForSelector("#searchboxinput", { visible: true });
+    await page.screenshot({ path: 'before-search.png' });
+
     await page.type("#searchboxinput", searchQuery);
     await page.click("#searchbox-searchbutton");
+    await page.screenshot({ path: 'after-search.png' });
 
-    await page.waitForSelector(".m6QErb.DxyBCb.kA9KIf.dS8AEf", {
-      visible: true,
-    });
+    try {
+      await page.waitForSelector(".m6QErb.DxyBCb.kA9KIf.dS8AEf", {
+        visible: true,
+        timeout: 30000
+      });
+    } catch (error) {
+      await page.screenshot({ path: 'error-state.png' });
+      console.log("Current page content:", await page.content());
+      throw error;
+    }
 
     await page.waitForSelector(
       '.m6QErb.DxyBCb.kA9KIf.dS8AEf.XiKgde.ecceSd[role="feed"]',
