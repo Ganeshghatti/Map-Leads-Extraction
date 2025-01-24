@@ -10,11 +10,16 @@ exports.MapExtract = async (req, res, next) => {
   }
   try {
     const url = `https://www.google.com/maps?hl=en`;
-
+    
     const browser = await puppeteer.launch({
-      headless: false,
-      args: ["--lang=en-US", "--disable-setuid-sandbox", "--no-sandbox"],
+      headless: true,
       defaultViewport: null,
+      args: [
+        "--window-size=1920,1080",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+      ],
     });
     const page = await browser.newPage();
 
