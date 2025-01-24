@@ -3,6 +3,9 @@ const LeadCollection = require("../../models/LeadCollection");
 const puppeteer = require("puppeteer");
 
 exports.MapExtract = async (req, res, next) => {
+  // Set timeout for this specific request
+  req.setTimeout(300000); // 5 minutes
+
   const { location, category, title, description } = req.body;
 
   if (!location || !category || !title) {

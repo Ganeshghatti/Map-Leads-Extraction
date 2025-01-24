@@ -26,14 +26,18 @@ app.use(leadsRoutes);
 app.use(leadsCollectionRoutes);
 app.use(outreachRoutes);
 
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
+
+server.timeout = 300000;
+
 app.get("/", (req, res) => {
   res.send("Welcome to The Squirrel backend");
 });
 
 connectDatabase();
-
-// Start the server
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
